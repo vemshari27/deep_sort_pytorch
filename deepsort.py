@@ -16,6 +16,7 @@ from utils.draw import draw_boxes
 from utils.parser import get_config
 from utils.log import get_logger
 from utils.io import write_results
+from utils.odometry import get_bbox_velocities
 
 
 
@@ -34,11 +35,15 @@ class VideoTracker(object):
             cv2.namedWindow("test", cv2.WINDOW_NORMAL)
             cv2.resizeWindow("test", args.display_width, args.display_height)
 
-        if args.cam != -1:
-            print("Using webcam " + str(args.cam))
-            self.vdo = cv2.VideoCapture(args.cam)
-        else:
-            self.vdo = cv2.VideoCapture()
+        # if args.cam != -1:
+        #     print("Using webcam " + str(args.cam))
+        #     self.vdo = cv2.VideoCapture(args.cam)
+        # else:
+        #     self.vdo = cv2.VideoCapture()
+        self.vdo = cv2.VideoCapture(video_path)
+        with open(args.odom_path,'r') as f:
+            self.odom = f.readlines()
+
         self.detector = build_detector(cfg, use_cuda=use_cuda)
         self.deepsort = build_tracker(cfg, use_cuda=use_cuda)
         self.class_names = self.detector.class_names
@@ -100,8 +105,11 @@ class VideoTracker(object):
             bbox_xywh[:, 3:] *= 1.2
             cls_conf = cls_conf[mask]
 
+            # get velocities
+            bbox_vel = get_bbox_velocities(self.odom[idx_frame-1], bbox_xywh)
+
             # do tracking
-            outputs = self.deepsort.update(bbox_xywh, cls_conf, im)
+            outputs = self.deepsort.update(bbox_xywh, cls_conf, bbox_vel, im)
 
             # draw boxes for visualization
             if len(outputs) > 0:
@@ -148,7 +156,8 @@ def parse_args():
     parser.add_argument("--display_height", type=int, default=600)
     parser.add_argument("--save_path", type=str, default="./output/")
     parser.add_argument("--cpu", dest="use_cuda", action="store_false", default=True)
-    parser.add_argument("--camera", action="store", dest="cam", type=int, default="-1")
+    parser.add_argument("--video_path", type=str, default='../data/GOPR1720.MP4')
+    parser.add_argument("--odom_path", type=str, default='../data/GOPR1720.txt')
     return parser.parse_args()
 
 
@@ -168,5 +177,5 @@ if __name__ == "__main__":
     else:
         cfg.USE_FASTREID = False
 
-    with VideoTracker(cfg, args, video_path=args.VIDEO_PATH) as vdo_trk:
+    with VideoTracker(cfg, args, video_path=args.video_path) as vdo_trk:
         vdo_trk.run()

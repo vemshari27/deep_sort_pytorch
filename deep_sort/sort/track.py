@@ -1,5 +1,6 @@
 # vim: expandtab:ts=4:sw=4
 
+import numpy as np
 
 class TrackState:
     """
@@ -136,7 +137,7 @@ class Track:
 
         """
         self.mean, self.covariance = kf.update(
-            self.mean, self.covariance, detection.to_xyah())
+            self.mean, self.covariance, np.concatenate(detection.to_xyah(),detection.vel))
         self.features.append(detection.feature)
 
         self.hits += 1

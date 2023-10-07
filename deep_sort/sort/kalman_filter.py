@@ -44,7 +44,7 @@ class KalmanFilter(object):
         self._motion_mat = np.eye(2 * ndim, 2 * ndim)
         for i in range(ndim):
             self._motion_mat[i, ndim + i] = dt
-        self._update_mat = np.eye(ndim, 2 * ndim)
+        self._update_mat = np.eye(2 * ndim, 2 * ndim)
 
         # Motion and observation uncertainty are chosen relative to the current
         # state estimate. These weights control the amount of uncertainty in
@@ -69,8 +69,9 @@ class KalmanFilter(object):
             to 0 mean.
 
         """
-        mean_pos = measurement
-        mean_vel = np.zeros_like(mean_pos)
+        mean_pos = measurement[0]
+        # mean_vel = np.zeros_like(mean_pos)
+        mean_vel = measurement[1]
         mean = np.r_[mean_pos, mean_vel]
 
         std = [
