@@ -68,11 +68,11 @@ class Tracker:
         matches, unmatched_tracks, unmatched_detections = \
             self._match(detections)
         
-        if len(detections)>0: #extra
-            if len(self.tracks) > 0:
-                matches = [[0,0]]
-                unmatched_tracks = []
-                unmatched_detections = []
+        # if len(detections)>0: #extra
+        #     if len(self.tracks) > 0:
+        #         matches = [[0,0]]
+        #         unmatched_tracks = []
+        #         unmatched_detections = []
 
         # Update track set.
         for track_idx, detection_idx in matches:
