@@ -12,7 +12,8 @@ __all__ = ['DeepSort']
 
 
 class DeepSort(object):
-    def __init__(self, model_path, model_config=None, max_dist=0.2, min_confidence=0.3, nms_max_overlap=1.0, max_iou_distance=0.7, max_age=70, n_init=3, nn_budget=100, use_cuda=True):
+    def __init__(self, model_path, model_config=None, max_dist=0.2, min_confidence=0.3, nms_max_overlap=1.0, max_iou_distance=0.7, max_age=70, n_init=3, 
+                 nn_budget=100, use_cuda=True):
         self.min_confidence = min_confidence
         self.nms_max_overlap = nms_max_overlap
 
@@ -22,15 +23,16 @@ class DeepSort(object):
         #     self.extractor = FastReIDExtractor(model_config, model_path, use_cuda=use_cuda)
 
         max_cosine_distance = max_dist
-        metric = NearestNeighborDistanceMetric("cosine", max_cosine_distance, nn_budget)
-        self.tracker = Tracker(metric, max_iou_distance=max_iou_distance, max_age=max_age, n_init=n_init)
+        metric_appearance = NearestNeighborDistanceMetric("cosine", max_cosine_distance, nn_budget)
+        metric_l = NearestNeighborDistanceMetric("euclidean", 1., nn_budget)
+        self.tracker = Tracker(metric_appearance, metric_l, max_iou_distance=max_iou_distance, max_age=max_age, n_init=n_init)
 
-    def update(self, bbox_xywh, depths, confidences, ori_img):
+    def update(self, bbox_xywh, depths, ids, confidences, ori_img, transform_pipeline):
         self.height, self.width = ori_img.shape[:2]
         # generate detections
-        features = self._get_features(bbox_xywh, ori_img)
+        features, features_l = self._get_features(bbox_xywh, ori_img, depths, ids, transform_pipeline)
         bbox_tlwh = self._xywh_to_tlwh(bbox_xywh)
-        detections = [Detection(bbox_tlwh[i], depths[i], conf, features[i]) for i,conf in enumerate(confidences) if conf>self.min_confidence]
+        detections = [Detection(bbox_tlwh[i], depths[i], conf, features[i], features_l[i]) for i,conf in enumerate(confidences) if conf>self.min_confidence]
 
         # run on non-maximum supression
         boxes = np.array([d.tlwh for d in detections])
@@ -40,7 +42,7 @@ class DeepSort(object):
 
         # update tracker
         self.tracker.predict()
-        self.tracker.update(detections)
+        self.tracker.update(detections, transform_pipeline)
 
         # output bbox identities
         outputs = []
@@ -104,16 +106,30 @@ class DeepSort(object):
         h = int(y2-y1)
         return t,l,w,h
     
-    def _get_features(self, bbox_xywh, ori_img):
+    def _get_features(self, bbox_xywh, ori_img, ids, depths, transform_pipeline):
         im_crops = []
-        for box in bbox_xywh:
+        features_l = []
+        for idx, box in enumerate(bbox_xywh):
             x1,y1,x2,y2 = self._xywh_to_xyxy(box)
             im = ori_img[y1:y2,x1:x2]
             im_crops.append(im)
+            x,y,_,_ = box
+            features_l.append(transform_pipeline([x,y], depths[idx]))
+            # tmp = np.array([0.,0.,0.], dtype=np.float32)
+            # if ids[idx] == 0:
+            #     tmp[0] = 4.
+            # elif ids[idx] == 1:
+            #     tmp[0] = 6.
+            # else:
+            #     tmp[0] = 8.
+            # features_l.append(tmp)
         if im_crops:
             features = self.extractor(im_crops)
+            features_l = np.array(features_l)
         else:
             features = np.array([])
-        return features
+            features_l = np.array([])
+        
+        return features, features_l
 
 
