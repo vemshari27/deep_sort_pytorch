@@ -115,14 +115,6 @@ class DeepSort(object):
             im_crops.append(im)
             x,y,_,_ = box
             features_l.append(transform_pipeline([x,y], depths[idx]))
-            # tmp = np.array([0.,0.,0.], dtype=np.float32)
-            # if ids[idx] == 0:
-            #     tmp[0] = 4.
-            # elif ids[idx] == 1:
-            #     tmp[0] = 6.
-            # else:
-            #     tmp[0] = 8.
-            # features_l.append(tmp)
         if im_crops:
             features = self.extractor(im_crops)
             features_l = np.array(features_l)
