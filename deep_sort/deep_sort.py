@@ -27,10 +27,10 @@ class DeepSort(object):
         metric_l = NearestNeighborDistanceMetric("euclidean", 1., nn_budget)
         self.tracker = Tracker(metric_appearance, metric_l, max_iou_distance=max_iou_distance, max_age=max_age, n_init=n_init)
 
-    def update(self, bbox_xywh, depths, ids, confidences, ori_img, transform_pipeline):
+    def update(self, bbox_xywh, depths, confidences, ori_img, transform_pipeline):
         self.height, self.width = ori_img.shape[:2]
         # generate detections
-        features, features_l = self._get_features(bbox_xywh, ori_img, depths, ids, transform_pipeline)
+        features, features_l = self._get_features(bbox_xywh, ori_img, depths, transform_pipeline)
         bbox_tlwh = self._xywh_to_tlwh(bbox_xywh)
         detections = [Detection(bbox_tlwh[i], depths[i], conf, features[i], features_l[i]) for i,conf in enumerate(confidences) if conf>self.min_confidence]
 
@@ -106,7 +106,7 @@ class DeepSort(object):
         h = int(y2-y1)
         return t,l,w,h
     
-    def _get_features(self, bbox_xywh, ori_img, ids, depths, transform_pipeline):
+    def _get_features(self, bbox_xywh, ori_img, depths, transform_pipeline):
         im_crops = []
         features_l = []
         for idx, box in enumerate(bbox_xywh):
