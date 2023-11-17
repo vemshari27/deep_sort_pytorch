@@ -69,12 +69,6 @@ class Tracker:
         matches, unmatched_tracks, unmatched_detections = \
             self._match(detections, transform_pipeline)
         
-        # if len(detections)>0: #extra
-        #     if len(self.tracks) > 0:
-        #         matches = [[0,0]]
-        #         unmatched_tracks = []
-        #         unmatched_detections = []
-
         # Update track set.
         for track_idx, detection_idx in matches:
             self.tracks[track_idx].update(
@@ -88,19 +82,21 @@ class Tracker:
 
         # Update distance metric.
         active_targets = [t.track_id for t in self.tracks if t.is_confirmed()]
-        features, features_l, targets = [], [], []
+        features, features_l, targets, targets_l = [], [], [], []
         for track in self.tracks:
             if not track.is_confirmed():
                 continue
             features += track.features
-            features_l += track.features_l
+            # features_l += track.features_l
+            features_l.append(track.feature_l)
             targets += [track.track_id for _ in track.features]
+            targets_l.append(track.track_id)
             track.features = []
-            track.features_l = []
+            # track.features_l = []
         self.metric.partial_fit(
             np.asarray(features), np.asarray(targets), active_targets)
         self.metric_l.partial_fit(
-            np.asarray(features_l), np.asarray(targets), active_targets)
+            np.asarray(features_l), np.asarray(targets_l), active_targets)
         
         # print("No of trackers", len(self.tracks)) #extra
         # for i in self.tracks:
@@ -123,6 +119,10 @@ class Tracker:
             features = np.array([dets[i].feature_l for i in detection_indices])
             targets = np.array([tracks[i].track_id for i in track_indices])
             cost_matrix = self.metric_l.distance(features, targets)
+            print("WC Cost Matrix; detection order:", detection_indices) #extra
+            for idx, i in enumerate(track_indices):
+                print("Track ID:",tracks[i].track_id)
+                print(cost_matrix[idx])
             # cost_matrix = linear_assignment.gate_cost_matrix(
             #     self.kf, cost_matrix, tracks, dets, track_indices,
             #     detection_indices)
@@ -136,27 +136,28 @@ class Tracker:
         unconfirmed_tracks = [
             i for i, t in enumerate(self.tracks) if not t.is_confirmed()]
         
-        # print("No of confirmed trackers", len(confirmed_tracks)) #extra
-        # # for i in confirmed_tracks:
-        # #     print(self.tracks[i])
-        # print("No of unconfirmed trackers", len(unconfirmed_tracks)) #extra
-        # # for i in unconfirmed_tracks:
-        # #     print(self.tracks[i])
-
+        print("Confirmed Tracker WCs:")
+        for i in confirmed_tracks:
+            track = self.tracks[i]
+            print(track.track_id, track.feature_l)
+        
         # Associate confirmed tracks using appearance features.
         matches_a, unmatched_tracks_a, unmatched_detections = \
             linear_assignment.matching_cascade(
                 gated_metric, self.metric.matching_threshold, self.max_age,
                 self.tracks, detections, confirmed_tracks)
         
-        # print("Appearance matches", matches_a, unmatched_tracks_a, unmatched_detections)
+        print("WC Candidates(Track IDs, Detection idxs):", [self.tracks[i].track_id for i in unmatched_tracks_a],  unmatched_detections)
         
         matches_c, unmatched_tracks_c, unmatched_detections = \
             linear_assignment.matching_cascade(
                 gated_metric_l, self.metric_l.matching_threshold, self.max_age,
                 self.tracks, detections, unmatched_tracks_a, unmatched_detections)
         
-        # print("L matches", matches_c, unmatched_tracks_c, unmatched_detections)
+        print("WC Matches(Track IDs, Detection idxs):")
+        for i in matches_c:
+            print(self.tracks[i[0]].track_id, i[1])
+
 
         # Associate remaining tracks together with unconfirmed tracks using IOU.
         iou_track_candidates = unconfirmed_tracks + [

@@ -2,7 +2,7 @@ import numpy as np
 import torch
 
 from .deep.feature_extractor import Extractor#, FastReIDExtractor
-from .sort.nn_matching import NearestNeighborDistanceMetric
+from .sort.nn_matching import NearestNeighborDistanceMetric, NearestNeighborDistanceMetric_l
 from .sort.preprocessing import non_max_suppression
 from .sort.detection import Detection
 from .sort.tracker import Tracker
@@ -24,7 +24,8 @@ class DeepSort(object):
 
         max_cosine_distance = max_dist
         metric_appearance = NearestNeighborDistanceMetric("cosine", max_cosine_distance, nn_budget)
-        metric_l = NearestNeighborDistanceMetric("euclidean", 1., nn_budget)
+        # metric_l = NearestNeighborDistanceMetric("euclidean", 0.1, nn_budget)
+        metric_l = NearestNeighborDistanceMetric_l("euclidean", 0.1)
         self.tracker = Tracker(metric_appearance, metric_l, max_iou_distance=max_iou_distance, max_age=max_age, n_init=n_init)
 
     def update(self, bbox_xywh, depths, confidences, ori_img, transform_pipeline):
@@ -38,7 +39,10 @@ class DeepSort(object):
         boxes = np.array([d.tlwh for d in detections])
         scores = np.array([d.confidence for d in detections])
         indices = non_max_suppression(boxes, self.nms_max_overlap, scores)
+        indices.sort()
         detections = [detections[i] for i in indices]
+        
+        #extra
 
         # update tracker
         self.tracker.predict()
@@ -53,7 +57,7 @@ class DeepSort(object):
             box = track.to_tlwh()
             x1,y1,x2,y2 = self._tlwh_to_xyxy(box)
             track_id = track.track_id
-            outputs.append(np.array([x1,y1,x2,y2,track_id], dtype=np.int))
+            outputs.append(np.array([x1,y1,x2,y2,track_id], dtype=np.int32))
             depths.append(track.depth)
         if len(outputs) > 0:
             outputs = np.stack(outputs,axis=0)
