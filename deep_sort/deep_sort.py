@@ -2,7 +2,7 @@ import numpy as np
 import torch
 
 from .deep.feature_extractor import Extractor#, FastReIDExtractor
-from .sort.nn_matching import NearestNeighborDistanceMetric, NearestNeighborDistanceMetric_l
+from .sort.nn_matching import NearestNeighborDistanceMetric
 from .sort.preprocessing import non_max_suppression
 from .sort.detection import Detection
 from .sort.tracker import Tracker
@@ -12,8 +12,10 @@ __all__ = ['DeepSort']
 
 
 class DeepSort(object):
-    def __init__(self, model_path, model_config=None, max_dist=0.2, min_confidence=0.3, nms_max_overlap=1.0, max_iou_distance=0.7, max_age=70, n_init=3, 
+    def __init__(self, model_name, model_path, model_config=None, max_dist=0.2, min_confidence=0.3, nms_max_overlap=1.0, max_iou_distance=0.7, max_age=70, n_init=3, 
                  nn_budget=100, use_cuda=True):
+        self.model_name = model_name
+
         self.min_confidence = min_confidence
         self.nms_max_overlap = nms_max_overlap
 
@@ -24,33 +26,30 @@ class DeepSort(object):
 
         max_cosine_distance = max_dist
         metric_appearance = NearestNeighborDistanceMetric("cosine", max_cosine_distance, nn_budget)
-        # metric_l = NearestNeighborDistanceMetric("euclidean", 0.1, nn_budget)
-        metric_l = NearestNeighborDistanceMetric_l("euclidean", 0.1)
-        self.tracker = Tracker(metric_appearance, metric_l, max_iou_distance=max_iou_distance, max_age=max_age, n_init=n_init)
+        metric_l = NearestNeighborDistanceMetric("euclidean_avg", 0.1, nn_budget)
+        self.tracker = Tracker(model_name, metric_appearance, metric_l, max_iou_distance=max_iou_distance, max_age=max_age, n_init=n_init)
 
-    def update(self, bbox_xywh, depths, confidences, ori_img, transform_pipeline):
+    def update(self, bbox_xywh, wcs, confidences, ori_img):
         self.height, self.width = ori_img.shape[:2]
         # generate detections
-        features, features_l = self._get_features(bbox_xywh, ori_img, depths, transform_pipeline)
+        features = self._get_features(bbox_xywh, ori_img)
+        features_l = np.array(wcs)
         bbox_tlwh = self._xywh_to_tlwh(bbox_xywh)
-        detections = [Detection(bbox_tlwh[i], depths[i], conf, features[i], features_l[i]) for i,conf in enumerate(confidences) if conf>self.min_confidence]
+        print(features.shape, features_l.shape, features_l)
+        detections = [Detection(bbox_tlwh[i], conf, features[i], features_l[i]) for i,conf in enumerate(confidences) if conf>self.min_confidence]
 
         # run on non-maximum supression
         boxes = np.array([d.tlwh for d in detections])
         scores = np.array([d.confidence for d in detections])
         indices = non_max_suppression(boxes, self.nms_max_overlap, scores)
-        indices.sort()
         detections = [detections[i] for i in indices]
-        
-        #extra
 
         # update tracker
         self.tracker.predict()
-        self.tracker.update(detections, transform_pipeline)
+        self.tracker.update(detections)
 
         # output bbox identities
         outputs = []
-        depths = []
         for track in self.tracker.tracks:
             if not track.is_confirmed() or track.time_since_update > 1:
                 continue
@@ -58,10 +57,9 @@ class DeepSort(object):
             x1,y1,x2,y2 = self._tlwh_to_xyxy(box)
             track_id = track.track_id
             outputs.append(np.array([x1,y1,x2,y2,track_id], dtype=np.int32))
-            depths.append(track.depth)
         if len(outputs) > 0:
             outputs = np.stack(outputs,axis=0)
-        return outputs, depths
+        return outputs
 
 
     """
@@ -110,22 +108,18 @@ class DeepSort(object):
         h = int(y2-y1)
         return t,l,w,h
     
-    def _get_features(self, bbox_xywh, ori_img, depths, transform_pipeline):
+    def _get_features(self, bbox_xywh, ori_img):
         im_crops = []
-        features_l = []
         for idx, box in enumerate(bbox_xywh):
             x1,y1,x2,y2 = self._xywh_to_xyxy(box)
             im = ori_img[y1:y2,x1:x2]
             im_crops.append(im)
             x,y,_,_ = box
-            features_l.append(transform_pipeline([x,y], depths[idx]))
         if im_crops:
             features = self.extractor(im_crops)
-            features_l = np.array(features_l)
         else:
             features = np.array([])
-            features_l = np.array([])
         
-        return features, features_l
+        return features
 
 

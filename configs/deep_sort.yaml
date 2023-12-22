@@ -1,5 +1,5 @@
 DEEPSORT:
-  REID_CKPT: "/mnt/358ecbeb-dc8c-461f-8854-c78c448ac39c/AgriCPS-srihari/LocalizeSORT/deep_sort_pytorch/deep_sort/deep/checkpoint/ckpt.t7"
+  REID_CKPT: "/home/srihari/tcs/AgriCPS-srihari/LocalizeSORT/deep_sort_pytorch/deep_sort/deep/checkpoint/ckpt.t7"
   MAX_DIST: 0.2
   MIN_CONFIDENCE: 0.3
   NMS_MAX_OVERLAP: 0.5

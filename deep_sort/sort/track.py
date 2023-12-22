@@ -64,23 +64,21 @@ class Track:
     """
 
     def __init__(self, mean, covariance, track_id, n_init, max_age,
-                 feature=None, feature_l=None, depth=None):
+                 feature=None, feature_l=None):
         self.mean = mean
         self.covariance = covariance
         self.track_id = track_id
         self.hits = 1
         self.age = 1
         self.time_since_update = 0
-        self.depth = depth
 
         self.state = TrackState.Tentative
         self.features = []
         if feature is not None:
             self.features.append(feature)
-        # self.features_l = []
-        # if feature_l is not None:
-        #     self.features_l.append(feature_l)
-        self.feature_l = feature_l
+        self.features_l = []
+        if feature_l is not None:
+            self.features_l.append(feature_l)
 
         self._n_init = n_init
         self._max_age = max_age
@@ -140,11 +138,10 @@ class Track:
             The associated detection.
 
         """
-        self.depth = detection.depth
         self.mean, self.covariance = kf.update(
             self.mean, self.covariance, detection.to_xyah())
         self.features.append(detection.feature)
-        # self.features_l.append(detection.feature_l)
+        self.features_l.append(detection.feature_l)
 
         self.hits += 1
         self.time_since_update = 0
@@ -173,6 +170,6 @@ class Track:
         return self.state == TrackState.Deleted
     
     def __str__(self) -> str: #extra
-        s = "track_id:{}\nhits:{}\nage:{}\ntime_since_update:{}\nstate:{}\nFeatureLen:{}\nFeature_lLen:{}".format(self.track_id, self.hits, self.age, 
-                    self.time_since_update, self.state, len(self.features), len(self.features_l))
+        s = "track_id:{}\nhits:{}\nage:{}\ntime_since_update:{}\nstate:{}\nFeatureLen:{}\nFeature_lLen:{}".format(self.track_id, self.hits, self.age, self.time_since_update,
+                                                                                                  self.state, len(self.features), len(self.features_l))
         return s

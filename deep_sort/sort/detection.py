@@ -26,9 +26,9 @@ class Detection(object):
 
     """
 
-    def __init__(self, tlwh, depth, confidence, feature, feature_l):
+    def __init__(self, tlwh, confidence, feature, feature_l):
         self.tlwh = np.asarray(tlwh, dtype=np.float32)
-        self.depth = depth
+        # self.depth = depth
         self.confidence = float(confidence)
         self.feature = np.asarray(feature, dtype=np.float32)
         self.feature_l = np.asarray(feature_l, dtype=np.float32)
