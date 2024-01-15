@@ -26,17 +26,16 @@ class DeepSort(object):
 
         max_cosine_distance = max_dist
         metric_appearance = NearestNeighborDistanceMetric("cosine", max_cosine_distance, nn_budget)
-        metric_l = NearestNeighborDistanceMetric("euclidean_avg", 0.1, nn_budget)
+        metric_l = NearestNeighborDistanceMetric("euclidean_avg", 0.12, nn_budget)
         self.tracker = Tracker(model_name, metric_appearance, metric_l, max_iou_distance=max_iou_distance, max_age=max_age, n_init=n_init)
 
-    def update(self, bbox_xywh, wcs, confidences, ori_img):
+    def update(self, bbox_xywh, wcs, det_ids, confidences, ori_img):
         self.height, self.width = ori_img.shape[:2]
         # generate detections
         features = self._get_features(bbox_xywh, ori_img)
         features_l = np.array(wcs)
         bbox_tlwh = self._xywh_to_tlwh(bbox_xywh)
-        print(features.shape, features_l.shape, features_l)
-        detections = [Detection(bbox_tlwh[i], conf, features[i], features_l[i]) for i,conf in enumerate(confidences) if conf>self.min_confidence]
+        detections = [Detection(bbox_tlwh[i], conf, features[i], features_l[i], det_ids[i]) for i,conf in enumerate(confidences) if conf>self.min_confidence]
 
         # run on non-maximum supression
         boxes = np.array([d.tlwh for d in detections])

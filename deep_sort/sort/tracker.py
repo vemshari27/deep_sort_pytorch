@@ -148,26 +148,38 @@ class Tracker:
             return matches, unmatched_tracks, unmatched_detections
         
         else:
-            # Associate confirmed tracks using appearance features.
-            matches_a, unmatched_tracks_a, unmatched_detections = \
-                linear_assignment.matching_cascade(
-                    gated_metric, self.metric.matching_threshold, self.max_age,
-                    self.tracks, detections, confirmed_tracks)
-            
-            matches_c, unmatched_tracks_c, unmatched_detections = \
-                linear_assignment.matching_cascade(
-                    gated_metric_l, self.metric_l.matching_threshold, self.max_age,
-                    self.tracks, detections, unmatched_tracks_a, unmatched_detections)
-            
+            # # Associate confirmed tracks using appearance features.
             # matches_a, unmatched_tracks_a, unmatched_detections = \
             #     linear_assignment.matching_cascade(
-            #         gated_metric_l, self.metric_l.matching_threshold, self.max_age,
+            #         gated_metric, self.metric.matching_threshold, self.max_age,
             #         self.tracks, detections, confirmed_tracks)
+            
+            # matches_c, unmatched_tracks_c, unmatched_detections = \
+            #     linear_assignment.matching_cascade(
+            #         gated_metric_l, self.metric_l.matching_threshold, self.max_age,
+            #         self.tracks, detections, unmatched_tracks_a, unmatched_detections)
+            
+            matches_a, unmatched_tracks_a, unmatched_detections = \
+                linear_assignment.matching_cascade(
+                    gated_metric_l, self.metric_l.matching_threshold, self.max_age,
+                    self.tracks, detections, confirmed_tracks)
+            
+            # if len(unmatched_tracks_a)>0 or len(unmatched_detections)>0:
+            #     print("L matches")
+            #     for track_idx, detection_idx in matches_a:
+            #         print(self.tracks[track_idx].track_id, detections[detection_idx].det_id)
+            #     print("L unmatches tracks")
+            #     for track_idx in unmatched_tracks_a:
+            #         print(self.tracks[track_idx].track_id)
+            #     print("L unmatches detectionss")
+            #     for detection_idx in unmatched_detections:
+            #         print(detections[detection_idx].det_id)
             
             # matches_c, unmatched_tracks_c, unmatched_detections = \
             #     linear_assignment.matching_cascade(
             #         gated_metric, self.metric.matching_threshold, self.max_age,
             #         self.tracks, detections, unmatched_tracks_a, unmatched_detections)
+            matches_c, unmatched_tracks_c, unmatched_detections = [], unmatched_tracks_a, unmatched_detections
             
             # Associate remaining tracks together with unconfirmed tracks using IOU.
             iou_track_candidates = unconfirmed_tracks + [

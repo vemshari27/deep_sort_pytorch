@@ -144,7 +144,9 @@ class KalmanFilter(object):
             self._std_weight_position * mean[3],
             1e-1,
             self._std_weight_position * mean[3]]
+        std = [0. for x in std]
         innovation_cov = np.diag(np.square(std))
+
 
         mean = np.dot(self._update_mat, mean)
         covariance = np.linalg.multi_dot((
