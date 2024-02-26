@@ -26,7 +26,7 @@ class DeepSort(object):
 
         max_cosine_distance = max_dist
         metric_appearance = NearestNeighborDistanceMetric("cosine", max_cosine_distance, nn_budget)
-        metric_l = NearestNeighborDistanceMetric("euclidean_avg", 0.12, nn_budget)
+        metric_l = NearestNeighborDistanceMetric("euclidean_avg", 0.01, nn_budget)
         self.tracker = Tracker(model_name, metric_appearance, metric_l, max_iou_distance=max_iou_distance, max_age=max_age, n_init=n_init)
 
     def update(self, bbox_xywh, wcs, det_ids, confidences, ori_img):
